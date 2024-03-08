@@ -1,0 +1,329 @@
+#!/bin/env bash
+
+# Set the name of this script
+SCRIPT_NAME="${0##*/}"
+
+# Set the version of this script
+SCRIPT_VERSION="2024.03.08.1101"
+
+# Print out error message
+print_error() {
+	printf '\033[1;97m[\033[1;31m-\033[1;97m] %s \n\033[00m' "$@"
+}
+
+# Print out success message
+print_success() {
+	printf '\033[1;97m[\033[1;32m+\033[1;97m] %s \n\033[00m' "$@"
+}
+
+# Print out non bold text aligned with print_error
+print_aligned() {
+	printf '    %s\n' "$@"
+}
+
+# Print program help
+print_help() {
+	printf "\033[1;97mNAME\033[00m
+	%s - build script for ersta font.
+
+\033[1;97mSYNOPSIS\033[00m
+	%s [OPTION]
+
+\033[1;97mDESCRIPTION\033[00m
+	Builds a customized version of Iosevka, Ersta.
+
+	\033[1;97m-h, --help\033[00m
+		display this help message and exit.
+
+	\033[1;97m-V, --version\033[00m
+		output version information and exit.
+
+\033[1;97mAUTHOR\033[00m
+	Written by Kolade Ayomide Olanrewaju.
+
+\033[1;97mREPORTING BUGS\033[00m
+	Create a new issue at <https://github.com/teth3r/ersta/>.
+
+\033[1;97mCOPYRIGHT\033[00m
+	This is free and unencumbered software released into the public domain.
+
+ersta-build %s\n" "$SCRIPT_NAME" "$SCRIPT_NAME" "$SCRIPT_VERSION"
+	}
+
+unset FONT_TYPEFACE
+
+# Handle input options
+for primary_options in "${@:1}"; do
+	case "$primary_options" in
+		-h | --help)
+			print_help "$@"
+			exit 0
+		;;
+		-V | --version)
+			printf '%s\n' "${SCRIPT_VERSION}"
+			exit 0
+		;;
+		-*)
+			[[ -z ${primary_options#*\-} || -z ${primary_options/\-\-*} ]] && {
+				print_error "Invalid option '${primary_options}'"
+				exit 1
+			}
+			print_error "Invalid option -- '${primary_options#*\-}'"
+			exit 1
+		;;
+		*)
+			print_error "Invalid option '${primary_options}'"
+			exit 1
+		;;
+	esac
+done
+
+# Only run as non-root user
+[[ $EUID -eq 0 ]] && {
+	print_error "Running as root user is not supported" &&
+	exit 1
+}
+
+# Only run if installed ram >= 7.2GB
+mem_total="$(cat /proc/meminfo)"
+mem_total="${mem_total//kB*}"
+mem_total="${mem_total//*MemTotal:}"
+mem_total="${mem_total//[[:space:]]}"
+
+[[ $mem_total -lt 7549747 ]] && {
+	print_error "Installed RAM is insufficient for build"
+	exit 1
+}
+
+# Save current dir
+CURRENT_DIR="$PWD"
+
+# Check build deps
+for deps in npm ttfautohint git ping; do
+	[[ ! $(type -p "$deps") ]] && {
+		print_error "$deps is not installed"
+		exit 1
+	}
+done
+
+# Check for internet connectivity
+[[ ! $(ping -c4 gnu.org 2>/dev/null) ]] && {
+	print_error "Network isn't ready yet"
+	exit 1
+}
+
+cd /home/"$USER"/Downloads || exit 1
+
+[[ -d ~/Downloads/Ersta ]] && rm -rf ~/Downloads/Ersta
+[[ -d ~/Downloads/Iosevka ]] && rm -rf ~/Downloads/Iosevka
+
+# Clone repo
+git clone --depth 1 https://github.com/be5invis/Iosevka.git || exit 1
+
+# Add custom build plans
+	cat << "EOF" > /home/"$USER"/Downloads/Iosevka/private-build-plans.toml
+[buildPlans.Ersta]
+family = "Ersta"
+spacing = "normal"
+serifs = "sans"
+noCvSs = true
+noLigation = false
+exportGlyphNames = true
+buildTextureFeature = true
+
+[buildPlans.Ersta.variants.design]
+digit-form = "lining"
+apl-form = "enable"
+capital-a = "straight-serifless"
+capital-b = "standard-serifless"
+capital-c = "serifless"
+capital-d = "standard-serifless"
+capital-e = "serifless"
+capital-f = "serifless"
+capital-g = "toothless-rounded-serifless-hooked"
+capital-h = "serifless"
+capital-i = "serifed"
+capital-j = "serifed"
+capital-k = "symmetric-touching-serifless"
+capital-l = "serifless"
+capital-m = "hanging-serifless"
+capital-n = "standard-serifless"
+capital-p = "closed-serifless"
+capital-q = "curly-tailed"
+capital-r = "straight-serifless"
+capital-s = "serifless"
+capital-t = "serifless"
+capital-u = "toothless-rounded-serifless"
+capital-v = "straight-serifless"
+capital-w = "straight-serifless"
+capital-x = "straight-serifless"
+capital-y = "straight-serifless"
+capital-z = "straight-serifless"
+a = "double-storey-serifless"
+b = "toothed-serifless"
+c = "serifless"
+d = "toothed-serifless"
+e = "flat-crossbar"
+f = "serifless"
+g = "single-storey-serifless"
+h = "straight-serifless"
+i = "serifed"
+j = "serifed"
+k = "symmetric-touching-serifless"
+l = "serifed"
+m = "serifless"
+n = "straight-serifless"
+p = "eared-serifless"
+q = "straight-serifless"
+r = "serifless"
+s = "serifless"
+t = "bent-hook"
+u = "toothed-serifless"
+v = "straight-serifless"
+w = "straight-serifless"
+x = "straight-serifless"
+y = "cursive-serifless"
+z = "straight-serifless"
+long-s = "bent-hook-serifless"
+eszet = "traditional-serifless"
+lower-eth = "straight-bar"
+lower-thorn = "serifless"
+lower-alpha = "crossing"
+capital-gamma = "serifless"
+capital-delta = "straight"
+lower-delta = "rounded"
+lower-iota = "tailed-serifed"
+capital-lambda = "straight-serifless"
+lower-lambda = "tailed-turn"
+lower-mu = "toothed-serifless"
+lower-xi = "flat-top"
+lower-pi = "tailed"
+lower-tau = "tailed"
+lower-chi = "straight-serifless"
+cyrl-capital-zhe = "symmetric-touching"
+cyrl-zhe = "symmetric-touching"
+cyrl-capital-ze = "serifless"
+cyrl-ze = "serifless"
+cyrl-capital-ka = "straight-serifless"
+cyrl-ka = "straight-serifless"
+cyrl-el = "straight"
+cyrl-em = "hanging-serifless"
+cyrl-en = "serifless"
+cyrl-er = "eared-serifless"
+cyrl-capital-u = "straight-turn-serifless"
+cyrl-u = "straight-turn-serifless"
+cyrl-ef = "serifless"
+cyrl-che = "standard"
+cyrl-yeri = "corner"
+cyrl-yery = "corner"
+cyrl-capital-ya = "straight-serifless"
+cyrl-ya = "straight-serifless"
+zero = "long-dotted"
+one = "base"
+two = "curly-neck"
+three = "two-arcs"
+four = "closed"
+five = "upright-arched"
+six = "closed-contour"
+seven = "straight-serifless"
+eight = "crossing"
+nine = "closed-contour"
+diacritic-dot = "round"
+punctuation-dot = "round"
+tilde = "low"
+asterisk = "hex-low"
+underscore = "above-baseline"
+caret = "medium"
+ascii-grave = "straight"
+ascii-single-quote = "straight"
+paren = "normal"
+brace = "straight"
+guillemet = "straight"
+number-sign = "upright"
+ampersand = "closed"
+at = "threefold"
+dollar = "through"
+cent = "through"
+percent = "rings-segmented-slash"
+bar = "force-upright"
+question = "smooth"
+pilcrow = "high"
+partial-derivative = "straight-bar"
+micro-sign = "toothed-serifless"
+lig-ltgteq = "flat"
+lig-neq = "slightly-slanted"
+lig-equal-chain = "with-notch"
+lig-hyphen-chain = "with-notch"
+lig-plus-chain = "with-notch"
+lig-double-arrow-bar = "with-notch"
+lig-single-arrow-bar = "with-notch"
+
+[buildPlans.Ersta.variants.italic]
+a = "double-storey-serifless"
+e = "flat-crossbar"
+f = "tailed"
+y = "cursive-serifless"
+lower-iota = "tailed-serifed"
+lower-tau = "tailed"
+four = "closed"
+six = "closed-contour"
+nine = "closed-contour"
+asterisk = "turn-hex-low"
+underscore = "above-baseline"
+
+  [buildPlans.Ersta.ligations]
+  inherits = "dlig"
+
+[buildPlans.Ersta.weights.Regular]
+shape = 400
+menu = 400
+css = 400
+
+[buildPlans.Ersta.weights.Bold]
+shape = 700
+menu = 700
+css = 700
+
+[buildPlans.Ersta.widths.Normal]
+shape = 500
+menu = 5
+css = "normal"
+
+[buildPlans.Ersta.slopes.Upright]
+angle = 0
+shape = "upright"
+menu = "upright"
+css = "normal"
+
+[buildPlans.Ersta.slopes.Italic]
+angle = 10
+shape = "italic"
+menu = "italic"
+css = "italic"
+EOF
+
+cd "/home/$USER/Downloads/Iosevka" || exit 1
+
+failed_to_build() {
+	printf '\n\n'
+	print_error "Something went wrong"
+	exit 1
+}
+
+npm install || failed_to_build
+
+npm run build -- ttf::Ersta || failed_to_build
+
+rm -r /home/"$USER"/Downloads/Ersta 2>/dev/null
+mkdir -p /home/"$USER"/Downloads/Ersta
+cp -r /home/"$USER"/Downloads/Iosevka/dist/Ersta/* /home/"$USER"/Downloads/Ersta
+
+printf '\n\n'
+
+print_success "Done building Ersta font"
+print_aligned "Check '/home/$USER/Downloads/Ersta'"
+
+cd "$CURRENT_DIR" || exit 1
+rm -rf /home/"$USER"/Downloads/Iosevka 2>/dev/null
+
+exit 0
