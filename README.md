@@ -1,5 +1,5 @@
 # Ersta
-Custom font variant of the Iosevka font.
+Custom variant of the Iosevka font.
 
 ## Dependencies
 The build script in this repo, `ersta-build` depends on `git`, `nodejs` and `ttfautohint`.
